@@ -9,10 +9,10 @@
     <Logger name="com.solacesystems" level="info" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
-    <Logger name="com.solace.samples" level="info" additivity="false">
+    <Logger name="com.solace.demo" level="info" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
-    <Logger name="com.solace.samples.GuaranteedPublisher" level="info" additivity="false">
+    <Logger name="com.solace.demo.GuaranteedPublisher" level="info" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
     <Root level="info">

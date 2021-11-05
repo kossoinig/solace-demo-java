@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package com.solace.samples;
+package com.solace.demo;
 
 import com.solacesystems.jms.SolConnectionFactory;
 import com.solacesystems.jms.SolJmsUtility;
@@ -35,9 +35,9 @@ import javax.jms.Session;
 /**
  * A more performant sample that shows an application that publishes.
  */
-public class CrewSchedulingAppPublisher {
+public class jmsT1TPublisher {
     
-    private static final String SAMPLE_NAME = CrewSchedulingAppPublisher.class.getSimpleName();
+    private static final String SAMPLE_NAME = jmsT1TPublisher.class.getSimpleName();
     private static final String TOPIC = "swa/crew/payraw";  // topic path to raw pay events
     private static final String API = "JMS";
     private static final int APPROX_MSG_RATE_PER_SEC = 100;

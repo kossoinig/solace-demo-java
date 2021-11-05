@@ -17,22 +17,20 @@
  * under the License.
  */
 
-package com.solace.samples;
+package com.solace.demo;
 
 import com.solacesystems.jms.SolConnectionFactory;
 import com.solacesystems.jms.SolJmsUtility;
-import com.solacesystems.jms.message.SolMessage;
 
 import javax.jms.*;
 
 /** This is a more detailed subscriber sample. */
-public class CrewRelaySvcSubscriber {
+public class jmsT2QConsumer {
 
-    private static final String SAMPLE_NAME = CrewRelaySvcSubscriber.class.getSimpleName();
+    private static final String SAMPLE_NAME = jmsT2QConsumer.class.getSimpleName();
+    private static final String QUEUE = "analyticsDataPipelineQueue";  // topic path to pay events
     private static final String API = "JMS";
-    private static final String QUEUE = "CrewRelaySvcQueue";
-
-
+    
     private static volatile int msgRecvCounter = 0;              // num messages received
     private static volatile boolean hasDetectedDiscard = false;  // detected any discards yet?
     private static volatile boolean isShutdown = false;          // are we done yet?
@@ -59,11 +57,6 @@ public class CrewRelaySvcSubscriber {
         // https://docs.solace.com/Solace-PubSub-Messaging-APIs/API-Developer-Guide/Configuring-Connection-T.htm
         connectionFactory.setDirectTransport(false);    // use Guaranteed transport for "non-persistent" messages
         connectionFactory.setClientID(API+"_"+SAMPLE_NAME);  // change the name, easier to find
-
-        // Enables persistent queues or topic endpoints to be created dynamically
-        // on the router, used when Session.createQueue() is called below
-        connectionFactory.setDynamicDurables(true);
-
         Connection connection = connectionFactory.createConnection();
 
         connection.setExceptionListener(jmsException -> {  // ExceptionListener.onException()
@@ -94,7 +87,7 @@ public class CrewRelaySvcSubscriber {
                 }
             }
         });
-
+        
         connection.start();
 
         System.out.println(API + " " + SAMPLE_NAME + " connected, and running. Press [ENTER] to quit.");

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package com.solace.samples;
+package com.solace.demo;
 
 import com.solacesystems.jms.SolConnectionFactory;
 import com.solacesystems.jms.SolJmsUtility;
@@ -31,9 +31,9 @@ import javax.jms.*;
  * This class is meant to be used with DirectPub and DirectSub, intercepting the published messages and
  * sending them on to a different topic.
  */
-public class CrewPayAnlyticsProcessor {
+public class jmsT1QT2TProcessor {
 
-    private static final String SAMPLE_NAME = CrewPayAnlyticsProcessor.class.getSimpleName();
+    private static final String SAMPLE_NAME = jmsT1QT2TProcessor.class.getSimpleName();
     private static final String TOPIC = "swa/crew/pay";      // topic path to pay events
     private static final String QUEUE = "CrewPayAnalyticsSvcQueue";  // queue path to payraw events
     private static final String API = "JMS";
