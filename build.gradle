@@ -74,11 +74,11 @@ sourceSets {
 
 def scripts = [
 
-    'jmsT1Producer':'com.solace.demo.jmsT1Producer',
+    'jmsT1Publisher':'com.solace.demo.jmsT1Publisher',
     'jmsT1Q1Consumer':'com.solace.demo.jmsT1Q1Consumer',
     'jmsT1Q2_T2Processor':'com.solace.demo.jmsT1Q2_T2Processor',
     'jmsT2Q3Consumer':'com.solace.demo.jmsT2Q3Consumer',
-    'jcsmpT1Producer':'com.solace.demo.jcsmpT1Producer',
+    'jcsmpT1Publisher':'com.solace.demo.jcsmpT1Publisher',
     'jcsmpT1Q1Consumer':'com.solace.demo.jcsmpT1Q1Consumer',
     'jcsmpT1Q2_T2Processor':'com.solace.demo.jcsmpT1Q2_T2Processor',
     'jcsmpT2Q3Consumer':'com.solace.demo.jcsmpT2Q3Consumer'
