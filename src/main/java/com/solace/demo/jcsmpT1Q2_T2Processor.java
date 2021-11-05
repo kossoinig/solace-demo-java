@@ -14,7 +14,7 @@
  * the License.
  */
 
-package com.solace.samples.jcsmp.patterns;
+package com.solace.demo;
 
 import com.solacesystems.jcsmp.BytesXMLMessage;
 import com.solacesystems.jcsmp.JCSMPChannelProperties;
@@ -41,9 +41,9 @@ import java.io.IOException;
  * This class is meant to be used with DirectPub and DirectSub, intercepting the published messages and
  * sending them on to a different topic.
  */
-public class DirectProcessor {
+public class jcsmpT1Q2_T2Processor {
 
-    private static final String SAMPLE_NAME = DirectProcessor.class.getSimpleName();
+    private static final String SAMPLE_NAME = jcsmpT1Q2_T2Processor.class.getSimpleName();
     private static final String TOPIC_PREFIX = "solace/samples/";  // used as the topic "root"
     private static final String API = "JCSMP";
     

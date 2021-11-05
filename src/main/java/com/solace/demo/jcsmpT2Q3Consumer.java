@@ -14,7 +14,7 @@
  * the License.
  */
 
-package com.solace.samples.jcsmp.patterns;
+package com.solace.demo;
 
 import com.solacesystems.jcsmp.BytesXMLMessage;
 import com.solacesystems.jcsmp.JCSMPChannelProperties;
@@ -30,9 +30,9 @@ import com.solacesystems.jcsmp.XMLMessageListener;
 import java.io.IOException;
 
 /** This is a more detailed subscriber sample. */
-public class jcsmpT1QConsumer {
+public class jcsmpT2Q3Consumer {
 
-    private static final String SAMPLE_NAME = com.solace.samples.jcsmp.patterns.jcsmpT1QConsumer.class.getSimpleName();
+    private static final String SAMPLE_NAME = jcsmpT2Q3Consumer.class.getSimpleName();
     private static final String TOPIC_PREFIX = "solace/samples/";  // used as the topic "root"
     private static final String API = "JCSMP";
 

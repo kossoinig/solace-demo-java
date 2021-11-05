@@ -14,7 +14,7 @@
  * the License.
  */
 
-package com.solace.samples.jcsmp.patterns;
+package com.solace.demo;
 
 import com.solacesystems.jcsmp.BytesMessage;
 import com.solacesystems.jcsmp.JCSMPChannelProperties;
@@ -38,9 +38,9 @@ import java.util.concurrent.Executors;
 /**
  * A more performant sample that shows an application that publishes.
  */
-public class DirectPublisher {
+public class jcsmpT1Publisher {
     
-    private static final String SAMPLE_NAME = DirectPublisher.class.getSimpleName();
+    private static final String SAMPLE_NAME = jcsmpT1Publisher.class.getSimpleName();
     private static final String TOPIC_PREFIX = "solace/samples/";  // used as the topic "root"
     private static final String API = "JCSMP";
     private static final int APPROX_MSG_RATE_PER_SEC = 100;

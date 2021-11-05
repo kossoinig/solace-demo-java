@@ -25,9 +25,9 @@ import com.solacesystems.jms.SolJmsUtility;
 import javax.jms.*;
 
 /** This is a more detailed subscriber sample. */
-public class jmsT2QConsumer {
+public class jmsT2Q3Consumer {
 
-    private static final String SAMPLE_NAME = jmsT2QConsumer.class.getSimpleName();
+    private static final String SAMPLE_NAME = jmsT2Q3Consumer.class.getSimpleName();
     private static final String QUEUE = "analyticsDataPipelineQueue";  // topic path to pay events
     private static final String API = "JMS";
     
