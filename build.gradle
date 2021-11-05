@@ -14,14 +14,14 @@ run.enabled = false
 distTar.enabled=false
 distZip.enabled=false
 
-applicationName = 'solace-samples-jms'
+applicationName = 'solace-demo-java'
 //version = ''
 
 jar {
-    archiveBaseName = 'solace-samples-jms'
+    archiveBaseName = 'solace-demo-java'
     archiveVersion = ''
     manifest {
-        attributes 'Implementation-Title': 'Solace Getting Started Samples',
+        attributes 'Implementation-Title': 'Solace Demo',
                    'Implementation-Version': ''
     }
 }
@@ -73,21 +73,16 @@ sourceSets {
 }
 
 def scripts = [
-    'HelloWorld':'com.solace.samples.jms.HelloWorld',
-    'DirectProcessor':'com.solace.samples.jms.patterns.DirectProcessor',
-    'DirectPublisher':'com.solace.samples.jms.patterns.DirectPublisher',
-    'DirectSubscriber':'com.solace.samples.jms.patterns.DirectSubscriber',
-    'DirectReplier':'com.solace.samples.jms.patterns.DirectReplier',
-    'topicPublisher': 'com.solace.samples.TopicPublisher',
-    'topicSubscriber':'com.solace.samples.TopicSubscriber',
-    'queueProducer':'com.solace.samples.QueueProducer',
-    'queueConsumer':'com.solace.samples.QueueConsumer',
-    'basicRequestor':'com.solace.samples.BasicRequestor',
-    'basicReplier':'com.solace.samples.BasicReplier',
-    'queueProducerJNDI':'com.solace.samples.QueueProducerJNDI',
-    'queueConsumerJNDI':'com.solace.samples.QueueConsumerJNDI',
-    'extJndiImport':'com.solace.samples.ExtJndiImport',
-    'extJndiTest':'com.solace.samples.ExtJndiTest'
+
+    'jmsT1Producer':'com.solace.demo.jmsT1Producer',
+    'jmsT1Q1Consumer':'com.solace.demo.jmsT1Q1Consumer',
+    'jmsT1Q2_T2Processor':'com.solace.demo.jmsT1Q2_T2Processor',
+    'jmsT2Q3Consumer':'com.solace.demo.jmsT2Q3Consumer',
+    'jcsmpT1Producer':'com.solace.demo.jcsmpT1Producer',
+    'jcsmpT1Q1Consumer':'com.solace.demo.jcsmpT1Q1Consumer',
+    'jcsmpT1Q2_T2Processor':'com.solace.demo.jcsmpT1Q2_T2Processor',
+    'jcsmpT2Q3Consumer':'com.solace.demo.jcsmpT2Q3Consumer'
+
 ]
 
 scripts.each() { scriptName, className ->
