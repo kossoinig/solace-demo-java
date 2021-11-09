@@ -16,40 +16,34 @@
 
 package com.solace.demo;
 
-import com.solacesystems.jcsmp.BytesMessage;
-import com.solacesystems.jcsmp.JCSMPChannelProperties;
-import com.solacesystems.jcsmp.JCSMPErrorResponseException;
-import com.solacesystems.jcsmp.JCSMPErrorResponseSubcodeEx;
-import com.solacesystems.jcsmp.JCSMPException;
-import com.solacesystems.jcsmp.JCSMPFactory;
-import com.solacesystems.jcsmp.JCSMPProperties;
-import com.solacesystems.jcsmp.JCSMPSession;
-import com.solacesystems.jcsmp.JCSMPStreamingPublishCorrelatingEventHandler;
-import com.solacesystems.jcsmp.JCSMPTransportException;
-import com.solacesystems.jcsmp.SessionEventArgs;
-import com.solacesystems.jcsmp.SessionEventHandler;
-import com.solacesystems.jcsmp.XMLMessageProducer;
+import com.solacesystems.jcsmp.*;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * A more performant sample that shows an application that publishes.
- */
+/** A more performant sample that shows an application that publishes. */
 public class jcsmpT1Publisher {
     
     private static final String SAMPLE_NAME = jcsmpT1Publisher.class.getSimpleName();
-    private static final String TOPIC_PREFIX = "solace/samples/";  // used as the topic "root"
+    private static final String TOPIC = "swa/crew/payraw";  // broker defined
     private static final String API = "JCSMP";
+
     private static final int APPROX_MSG_RATE_PER_SEC = 100;
     private static final int PAYLOAD_SIZE = 100;
     
     private static volatile int msgSentCounter = 0;                   // num messages sent
     private static volatile boolean isShutdown = false;
 
-    /** Main method. */
+
+    /** Main method.
+     * @param args
+     * @throws JCSMPException
+     * @throws IOException
+     * @throws InterruptedException
+     */
     public static void main(String... args) throws JCSMPException, IOException, InterruptedException {
         if (args.length < 3) {  // Check command line arguments
             System.out.printf("Usage: %s <host:port> <message-vpn> <client-username> [password]%n%n", SAMPLE_NAME);
@@ -65,18 +59,28 @@ public class jcsmpT1Publisher {
             properties.setProperty(JCSMPProperties.PASSWORD, args[3]);  // client-password
         }
         properties.setProperty(JCSMPProperties.GENERATE_SEQUENCE_NUMBERS, true);  // not required, but interesting
+
+
         JCSMPChannelProperties channelProps = new JCSMPChannelProperties();
         channelProps.setReconnectRetries(20);      // recommended settings
         channelProps.setConnectRetriesPerHost(5);  // recommended settings
         // https://docs.solace.com/Solace-PubSub-Messaging-APIs/API-Developer-Guide/Configuring-Connection-T.htm
         properties.setProperty(JCSMPProperties.CLIENT_CHANNEL_PROPERTIES, channelProps);
-        final JCSMPSession session;
-        session = JCSMPFactory.onlyInstance().createSession(properties, null, new SessionEventHandler() {
+
+
+
+
+
+
+
+        // Create a session for interacting with the PubSub+ broker
+        final JCSMPSession session = JCSMPFactory.onlyInstance().createSession(properties, null, new SessionEventHandler() {
             @Override
             public void handleEvent(SessionEventArgs event) {  // could be reconnecting, connection lost, etc.
                 System.out.printf("### Received a Session event: %s%n", event);
             }
         });
+
         session.connect();  // connect to the broker
 
         // Simple anonymous inner-class for handling publishing events
@@ -105,6 +109,9 @@ public class jcsmpT1Publisher {
         publishThread.submit(() -> {  // create an application thread for publishing in a loop, instead of main thread
             // preallocate a binary message, reuse it each loop, for performance
             final BytesMessage message = JCSMPFactory.onlyInstance().createMessage(BytesMessage.class);
+            // create the topic reference once and reuse it
+            final Destination destination = JCSMPFactory.onlyInstance().createTopic(TOPIC);
+
             byte[] payload = new byte[PAYLOAD_SIZE];  // preallocate memory, for reuse, for performance
             while (!isShutdown) {
                 try {
@@ -113,10 +120,7 @@ public class jcsmpT1Publisher {
                     Arrays.fill(payload,(byte)chosenCharacter);  // fill the payload completely with that char
                     message.setData(payload);
                     message.setApplicationMessageId(UUID.randomUUID().toString());  // as an example of a header
-                    // dynamic topics!!  "solace/samples/jcsmp/direct/pub/A"
-                    String topicString = new StringBuilder(TOPIC_PREFIX).append(API.toLowerCase())
-                            .append("/direct/pub/").append(chosenCharacter).toString();  // StringBuilder faster than +
-                    producer.send(message,JCSMPFactory.onlyInstance().createTopic(topicString));  // send the message
+                    producer.send(message,destination);  // send the message
                     msgSentCounter++;  // add one
                     message.reset();   // reuse this message, to avoid having to recreate it: better performance
                 } catch (JCSMPException e) {  // threw from send(), only thing that is throwing here, but keep trying (unless shutdown?)

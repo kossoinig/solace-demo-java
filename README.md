@@ -22,12 +22,17 @@ Just clone and build. For example:
 
 This demo is for exploring integration and performance of the Solace Java APIs.
 
-Scripts (work in progress):
+Scripts:
 
-    ./build/staged/bin/analyticsDataPipelineSubscriber <host:port> <message-vpn> <client-username> [password]
-    ./build/staged/bin/crewRelaySvcSubscriber <host:port> <message-vpn> <client-username> [password]
-    ./build/staged/bin/crewPayAnalyticsProcessor <host:port> <message-vpn> <client-username> [password]
-    ./build/staged/bin/crewSchedulingAppPublisher <host:port> <message-vpn> <client-username> [password]
+    ./build/staged/bin/jmsT1Publisher <host:port> <message-vpn> <client-username> [password]
+    ./build/staged/bin/jmsT1Q1Consumer <host:port> <message-vpn> <client-username> [password]
+    ./build/staged/bin/jmsT1Q2_T2Processor <host:port> <message-vpn> <client-username> [password]
+    ./build/staged/bin/jmsT2Q3Consumer <host:port> <message-vpn> <client-username> [password]
+
+    ./build/staged/bin/jcsmpT1Publisher <host:port> <message-vpn> <client-username> [password]
+    ./build/staged/bin/jcsmpT1Q1Consumer <host:port> <message-vpn> <client-username> [password]
+    ./build/staged/bin/jcsmpT1Q2_T2Processor <host:port> <message-vpn> <client-username> [password]
+    ./build/staged/bin/jcsmpT2Q3Consumer <host:port> <message-vpn> <client-username> [password]
 
 Tip - You can find above launch parameters in Connect tab of the Cluster Manager page (expand first section)
    

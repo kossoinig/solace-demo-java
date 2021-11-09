@@ -16,22 +16,9 @@
 
 package com.solace.demo;
 
-import com.solacesystems.jcsmp.BytesXMLMessage;
-import com.solacesystems.jcsmp.JCSMPChannelProperties;
-import com.solacesystems.jcsmp.JCSMPErrorResponseException;
-import com.solacesystems.jcsmp.JCSMPErrorResponseSubcodeEx;
-import com.solacesystems.jcsmp.JCSMPException;
-import com.solacesystems.jcsmp.JCSMPFactory;
-import com.solacesystems.jcsmp.JCSMPProperties;
-import com.solacesystems.jcsmp.JCSMPSession;
-import com.solacesystems.jcsmp.JCSMPStreamingPublishCorrelatingEventHandler;
-import com.solacesystems.jcsmp.JCSMPTransportException;
-import com.solacesystems.jcsmp.SessionEventArgs;
-import com.solacesystems.jcsmp.SessionEventHandler;
-import com.solacesystems.jcsmp.TextMessage;
-import com.solacesystems.jcsmp.XMLMessageConsumer;
-import com.solacesystems.jcsmp.XMLMessageListener;
-import com.solacesystems.jcsmp.XMLMessageProducer;
+import com.solacesystems.jcsmp.*;
+import com.solacesystems.jcsmp.impl.JCSMPXMLMessageProducer;
+
 import java.io.IOException;
 
 /**
@@ -44,14 +31,22 @@ import java.io.IOException;
 public class jcsmpT1Q2_T2Processor {
 
     private static final String SAMPLE_NAME = jcsmpT1Q2_T2Processor.class.getSimpleName();
-    private static final String TOPIC_PREFIX = "solace/samples/";  // used as the topic "root"
+    private static final String TOPIC = "swa/crew/pay";      // broker defined, output
+    private static final String QUEUE = "CrewPayAnalyticsSvcQueue";  // broker defined, input
     private static final String API = "JCSMP";
     
     private static volatile int msgRecvCounter = 0;              // num messages received
-    private static volatile int msgSentCounter = 0;                   // num messages sent
+    private static volatile int msgSentCounter = 0;              // num messages sent
+    private static volatile boolean hasDetectedDiscard = false;  // detected any discards yet?
+
     private static volatile boolean isShutdown = false;  // are we done yet?
 
-    /** Main method. */
+    /** Main method.
+     * @param args
+     * @throws JCSMPException
+     * @throws IOException
+     * @throws InterruptedException
+     */
     public static void main(String... args) throws JCSMPException, IOException, InterruptedException {
         if (args.length < 3) {  // Check command line arguments
             System.out.printf("Usage: %s <host:port> <message-vpn> <client-username> [password]%n%n", SAMPLE_NAME);
@@ -67,23 +62,35 @@ public class jcsmpT1Q2_T2Processor {
             properties.setProperty(JCSMPProperties.PASSWORD, args[3]);  // client-password
         }
         properties.setProperty(JCSMPProperties.REAPPLY_SUBSCRIPTIONS, true);  // re-subscribe Direct subs after reconnect
-        JCSMPChannelProperties channelProps = new JCSMPChannelProperties();
-        channelProps.setReconnectRetries(20);      // recommended settings
-        channelProps.setConnectRetriesPerHost(5);  // recommended settings
+        properties.setProperty(JCSMPProperties.SUPPORTED_MESSAGE_ACK_CLIENT, true);  // client will ack each queued message
+
+        JCSMPChannelProperties channelProperties = new JCSMPChannelProperties();
+        channelProperties.setReconnectRetries(20);      // recommended settings
+        channelProperties.setConnectRetriesPerHost(5);  // recommended settings
         // https://docs.solace.com/Solace-PubSub-Messaging-APIs/API-Developer-Guide/Configuring-Connection-T.htm
-        properties.setProperty(JCSMPProperties.CLIENT_CHANNEL_PROPERTIES, channelProps);
-        final JCSMPSession session;
-        session = JCSMPFactory.onlyInstance().createSession(properties, null, new SessionEventHandler() {
+        properties.setProperty(JCSMPProperties.CLIENT_CHANNEL_PROPERTIES, channelProperties);
+
+        /*
+         * SUPPORTED_MESSAGE_ACK_AUTO means that the received messages on the Flow
+         * are implicitly acknowledged on return from the onReceive() of the XMLMessageListener
+         * specified in createFlow().
+         */
+        properties.setProperty(JCSMPProperties.MESSAGE_ACK_MODE, JCSMPProperties.SUPPORTED_MESSAGE_ACK_AUTO);
+
+        // Create a session for interacting with the PubSub+ broker
+        final JCSMPSession session = JCSMPFactory.onlyInstance().createSession(properties, null, new SessionEventHandler() {
             @Override
             public void handleEvent(SessionEventArgs event) {  // could be reconnecting, connection lost, etc.
                 System.out.printf("### Received a Session event: %s%n", event);
             }
         });
+
         session.connect();  // connect to the broker
 
+        session.getMessageConsumer((XMLMessageListener)null);
+
         // Simple anonymous inner-class for handling publishing events
-        final XMLMessageProducer producer;
-        producer = session.getMessageProducer(new JCSMPStreamingPublishCorrelatingEventHandler() {
+        final XMLMessageProducer producer = session.getMessageProducer(new JCSMPStreamingPublishCorrelatingEventHandler() {
             // unused in Direct Messaging application, only for Guaranteed/Persistent publishing application
             @Override public void responseReceivedEx(Object key) {
             }
@@ -104,24 +111,19 @@ public class jcsmpT1Q2_T2Processor {
         });
 
         // Simple anonymous inner-class for async receiving of messages
-        final XMLMessageConsumer cons = session.getMessageConsumer(new XMLMessageListener() {
+        final XMLMessageConsumer consumer = session.getMessageConsumer(new XMLMessageListener() {
             @Override
             public void onReceive(BytesXMLMessage inboundMsg) {
                 msgRecvCounter++;
                 String inboundTopic = inboundMsg.getDestination().getName();
-                if (inboundTopic.matches(TOPIC_PREFIX + ".+?/direct/pub/.*")) {  // use of regex to match variable API level
-                    // how to "process" the incoming message? maybe do a DB lookup? add some additional properties? or change the payload?
                     TextMessage outboundMsg = JCSMPFactory.onlyInstance().createMessage(TextMessage.class);
                     final String upperCaseMessage = inboundTopic.toUpperCase();  // as a silly example of "processing"
                     outboundMsg.setText(upperCaseMessage);
                     if (inboundMsg.getApplicationMessageId() != null) {  // populate for traceability
                         outboundMsg.setApplicationMessageId(inboundMsg.getApplicationMessageId());
                     }
-                    String [] inboundTopicLevels = inboundTopic.split("/",6);
-                    String outboundTopic = new StringBuilder(TOPIC_PREFIX).append(API.toLowerCase())
-                            .append("/direct/upper/").append(inboundTopicLevels[5]).toString();
                     try {
-                        producer.send(outboundMsg, JCSMPFactory.onlyInstance().createTopic(outboundTopic));
+                        producer.send(outboundMsg, JCSMPFactory.onlyInstance().createTopic(TOPIC));
                         msgSentCounter++;
                     } catch (JCSMPException e) {  // threw from send(), only thing that is throwing here, but keep looping (unless shutdown?)
                         System.out.printf("### Caught while trying to producer.send(): %s%n",e);
@@ -129,10 +131,9 @@ public class jcsmpT1Q2_T2Processor {
                             isShutdown = true;
                         }
                     }
-                } else if (inboundMsg.getDestination().getName().endsWith("control/quit")) {  // special sample message
-                    System.out.println(">>> QUIT message received, shutting down.");  // example of command-and-control w/msgs
-                    isShutdown = true;
-                }
+                    finally {
+                        inboundMsg.ackMessage();  // not needed per SUPPORTED_MESSAGE_ACK_AUTO property set above???
+                    }
             }
 
             public void onException(JCSMPException e) {
@@ -140,20 +141,37 @@ public class jcsmpT1Q2_T2Processor {
             }
         });
 
-        session.addSubscription(JCSMPFactory.onlyInstance().createTopic(TOPIC_PREFIX + "*/direct/pub/>"));  // listen to the direct publisher samples
-        // add more subscriptions here if you want
-        cons.start();
 
+        // setup the queue, flow properties and endpoint properties
+        final Queue queue = JCSMPFactory.onlyInstance().createQueue(QUEUE);
+        final ConsumerFlowProperties flow_prop = new ConsumerFlowProperties();
+        flow_prop.setEndpoint(queue);
+        flow_prop.setAckMode(JCSMPProperties.SUPPORTED_MESSAGE_ACK_CLIENT);
+        EndpointProperties endpoint_props = new EndpointProperties();
+        endpoint_props.setAccessType(EndpointProperties.ACCESSTYPE_EXCLUSIVE);
+
+        // instantiate a consumer instance of the consumer inner class with flow and endpoint properties defined above
+        Consumer cons = session.createFlow(consumer.getMessageListener(), flow_prop, endpoint_props);
+
+        // connect to the broker
+        session.connect();
+
+        // start the consumer instance
+        cons.start();
         System.out.println(API + " " + SAMPLE_NAME + " connected, and running. Press [ENTER] to quit.");
-        while (System.in.available() == 0 && !isShutdown) {  // time to loop!
-            Thread.sleep(1000);  // take a pause
-            System.out.printf("%s %s Received -> Published msgs/s: %,d -> %,d%n",
-                    API,SAMPLE_NAME,msgRecvCounter,msgSentCounter);  // simple way of calculating message rates
+        while (System.in.available() == 0 && !isShutdown) {
+            Thread.sleep(1000);  // wait 1 second
+            System.out.printf("%s %s Received msgs/s: %,d Sent msgs/s: %,d%n",API,SAMPLE_NAME,msgRecvCounter, msgSentCounter);  // simple way of calculating message rates
             msgRecvCounter = 0;
             msgSentCounter = 0;
+            if (hasDetectedDiscard) {
+                System.out.println("*** Egress discard detected *** : "
+                        + SAMPLE_NAME + " unable to keep up with full message rate");
+                hasDetectedDiscard = false;  // only show the error once per second
+            }
         }
         isShutdown = true;
-        session.closeSession();  // will also close producer and consumer objects
+        session.closeSession();  // will also close consumer object
         System.out.println("Main thread quitting.");
     }
 }

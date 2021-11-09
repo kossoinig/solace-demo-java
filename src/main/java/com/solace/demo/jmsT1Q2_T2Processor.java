@@ -37,12 +37,19 @@ public class jmsT1Q2_T2Processor {
     private static final String TOPIC = "swa/crew/pay";      // topic path to pay events
     private static final String QUEUE = "CrewPayAnalyticsSvcQueue";  // queue path to payraw events
     private static final String API = "JMS";
+
     private static volatile int msgRecvCounter = 0;              // num messages received
+    private static volatile int msgSentCounter = 0;              // num messages sent
     private static volatile boolean hasDetectedDiscard = false;  // detected any discards yet?
 
     private static volatile boolean isShutdown = false;  // are we done yet?
 
-    /** Main method. */
+
+
+    /** Main method.
+     * @param args
+     * @throws Exception
+     */
     public static void main(String... args) throws Exception {
         if (args.length < 3) {  // Check command line arguments
             System.out.printf("Usage: %s <host:port> <message-vpn> <client-username> [password]%n%n", SAMPLE_NAME);
@@ -75,7 +82,7 @@ public class jmsT1Q2_T2Processor {
         });
 
         // Create a session for interacting with the PubSub+ broker
-        Session session = connection.createSession(false,Session.CLIENT_ACKNOWLEDGE);  // ACK mode doesn't matter for Direct only
+        Session session = connection.createSession(false,Session.CLIENT_ACKNOWLEDGE);
 
         MessageProducer producer = session.createProducer(null);  // do not bind the producer to a specific topic
         producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);    // use non-persistent (Direct here) as default

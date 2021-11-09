@@ -16,31 +16,31 @@
 
 package com.solace.demo;
 
-import com.solacesystems.jcsmp.BytesXMLMessage;
-import com.solacesystems.jcsmp.JCSMPChannelProperties;
-import com.solacesystems.jcsmp.JCSMPException;
-import com.solacesystems.jcsmp.JCSMPFactory;
-import com.solacesystems.jcsmp.JCSMPProperties;
-import com.solacesystems.jcsmp.JCSMPSession;
-import com.solacesystems.jcsmp.JCSMPTransportException;
-import com.solacesystems.jcsmp.SessionEventArgs;
-import com.solacesystems.jcsmp.SessionEventHandler;
-import com.solacesystems.jcsmp.XMLMessageConsumer;
-import com.solacesystems.jcsmp.XMLMessageListener;
+import com.solacesystems.jcsmp.*;
+
+import javax.jms.JMSException;
 import java.io.IOException;
 
 /** This is a more detailed subscriber sample. */
 public class jcsmpT1Q1Consumer {
 
     private static final String SAMPLE_NAME = jcsmpT1Q1Consumer.class.getSimpleName();
-    private static final String TOPIC_PREFIX = "solace/samples/";  // used as the topic "root"
+    private static final String QUEUE = "CrewRelaySvcQueue";  // broker defined
     private static final String API = "JCSMP";
+
+
+
 
     private static volatile int msgRecvCounter = 0;              // num messages received
     private static volatile boolean hasDetectedDiscard = false;  // detected any discards yet?
     private static volatile boolean isShutdown = false;          // are we done yet?
 
-    /** the main method. */
+    /** Main method.
+     * @param args
+     * @throws JCSMPException
+     * @throws IOException
+     * @throws InterruptedException
+     */
     public static void main(String... args) throws JCSMPException, IOException, InterruptedException {
         if (args.length < 3) {  // Check command line arguments
             System.out.printf("Usage: %s <host:port> <message-vpn> <client-username> [password]%n%n", SAMPLE_NAME);
@@ -56,11 +56,21 @@ public class jcsmpT1Q1Consumer {
             properties.setProperty(JCSMPProperties.PASSWORD, args[3]);  // client-password
         }
         properties.setProperty(JCSMPProperties.REAPPLY_SUBSCRIPTIONS, true);  // subscribe Direct subs after reconnect
-        JCSMPChannelProperties channelProps = new JCSMPChannelProperties();
-        channelProps.setReconnectRetries(20);      // recommended settings
-        channelProps.setConnectRetriesPerHost(5);  // recommended settings
+        properties.setProperty(JCSMPProperties.SUPPORTED_MESSAGE_ACK_CLIENT, true);  // client will ack each queued message
+
+        JCSMPChannelProperties channelProperties = new JCSMPChannelProperties();
+        channelProperties.setReconnectRetries(20);      // recommended settings
+        channelProperties.setConnectRetriesPerHost(5);  // recommended settings
         // https://docs.solace.com/Solace-PubSub-Messaging-APIs/API-Developer-Guide/Configuring-Connection-T.htm
-        properties.setProperty(JCSMPProperties.CLIENT_CHANNEL_PROPERTIES, channelProps);
+        properties.setProperty(JCSMPProperties.CLIENT_CHANNEL_PROPERTIES, channelProperties);
+
+        /*
+         * SUPPORTED_MESSAGE_ACK_AUTO means that the received messages on the Flow
+         * are implicitly acknowledged on return from the onReceive() of the XMLMessageListener
+         * specified in createFlow().
+         */
+        properties.setProperty(JCSMPProperties.MESSAGE_ACK_MODE, JCSMPProperties.SUPPORTED_MESSAGE_ACK_AUTO);
+
         final JCSMPSession session;
         session = JCSMPFactory.onlyInstance().createSession(properties, null, new SessionEventHandler() {
             @Override
@@ -70,34 +80,16 @@ public class jcsmpT1Q1Consumer {
         });
         session.connect();  // connect to the broker
 
-        // Anonymous inner-class for MessageListener, this demonstrates the async threaded message callback
-        final XMLMessageConsumer consumer = session.getMessageConsumer(new XMLMessageListener() {
-            @Override
-            public void onReceive(BytesXMLMessage message) {
-                // do not print anything to console... too slow!
-                msgRecvCounter++;
-                // do some message processing here... validate the payload, increment some counters, update some graphics, trigger another event
-                if (message.getDiscardIndication()) {  // since Direct messages, check if there have been any lost any messages
-                    // If the consumer is being over-driven (i.e. publish rates too high), the broker might discard some messages for this consumer
-                    // check this flag to know if that's happened
-                    // to avoid discards:
-                    //  a) reduce publish rate
-                    //  b) use multiple-threads or shared subscriptions for parallel processing
-                    //  c) increase size of consumer's D-1 egress buffers (check client-profile) (helps more with bursts)
-                    hasDetectedDiscard = true;  // set my own flag
-                }
-            }
+        session.getMessageConsumer((XMLMessageListener)null);
 
-            @Override
-            public void onException(JCSMPException e) {  // uh oh!
-                System.out.printf("### MessageListener's onException(): %s%n",e);
-                if (e instanceof JCSMPTransportException) {  // all reconnect attempts failed
-                    isShutdown = true;  // let's quit; or, could initiate a new connection attempt
-                }
-            }
-        });
+        final Queue queue = JCSMPFactory.onlyInstance().createQueue(QUEUE);
+        final ConsumerFlowProperties flow_prop = new ConsumerFlowProperties();
+        flow_prop.setEndpoint(queue);
+        flow_prop.setAckMode(JCSMPProperties.SUPPORTED_MESSAGE_ACK_CLIENT);
+        EndpointProperties endpoint_props = new EndpointProperties();
+        endpoint_props.setAccessType(EndpointProperties.ACCESSTYPE_EXCLUSIVE);
 
-        session.addSubscription(JCSMPFactory.onlyInstance().createTopic(TOPIC_PREFIX + "*/direct/>"));
+        Consumer consumer = session.createFlow(new MessageListener(), flow_prop);
         consumer.start();
         System.out.println(API + " " + SAMPLE_NAME + " connected, and running. Press [ENTER] to quit.");
         while (System.in.available() == 0 && !isShutdown) {
@@ -113,5 +105,19 @@ public class jcsmpT1Q1Consumer {
         isShutdown = true;
         session.closeSession();  // will also close consumer object
         System.out.println("Main thread quitting.");
+    }
+
+    // Used by consumer session for async threaded message callback and exception handling
+    static class MessageListener implements XMLMessageListener {
+        public void onException(JCSMPException exception) {
+            exception.printStackTrace();
+        }
+
+        public void onReceive(BytesXMLMessage inboundMsg) {
+            // do not print anything to console... too slow!
+            msgRecvCounter++;
+            String messageText = inboundMsg.toString();
+            inboundMsg.ackMessage();  // not needed per SUPPORTED_MESSAGE_ACK_AUTO property set above???
+        }
     }
 }
